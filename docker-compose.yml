@@ -1,0 +1,14 @@
+services:
+  musicrate:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ARTIST_PASSWORD: ${ARTIST_PASSWORD:-00112233}
+      DATA_DIR: /data
+    volumes:
+      - musicrate-data:/data
+    restart: unless-stopped
+
+volumes:
+  musicrate-data:

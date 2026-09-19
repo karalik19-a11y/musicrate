@@ -1,0 +1,27 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# One web service serves both the API and the built client.
+# NOTE: persistent disks are not available on Render's free tier; without a disk
+# uploads and the SQLite file are lost on every deploy/restart.
+services:
+  - type: web
+    name: musicrate
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: musicrate-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: ARTIST_PASSWORD
+        sync: false   # set in the dashboard
