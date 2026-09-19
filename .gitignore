@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# builds
+client/dist/
+server/dist/
+
+# runtime data (database + uploaded audio)
+data/
+server/data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.log
+coverage/
+.playwright/
