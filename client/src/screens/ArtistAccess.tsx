@@ -2,9 +2,9 @@ import { Check, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import type { AuthResponse } from '@shared/types';
 import { Button } from '@/components/ui/Button';
-import { api, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { tap } from '@/lib/haptics';
 import { homeFor, useAuth } from '@/stores/auth';
 import { EntryLayout } from './EntryLayout';
@@ -29,11 +29,7 @@ export function ArtistAccess() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<AuthResponse>('/auth/artist', {
-        method: 'POST',
-        body: { password: code.trim(), artistKey: artistKey ?? undefined },
-        silent401: true,
-      });
+      const res = await getBackend().loginArtist(code.trim(), artistKey ?? undefined);
       setGranted(true);
       tap([10, 30, 10]);
       window.setTimeout(() => {

@@ -15,12 +15,45 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MUSICRATE" />
     <meta name="format-detection" content="telephone=no" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Relative URLs: the same bundle is served from /docs/app/ on GitHub Pages,
+         from the domain root on Docker/Render, and from any sub-path. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <style>
+      /* Paint the app background before any JS runs: no white flash on iOS. */
+      html,
+      body {
+        margin: 0;
+        background: #060607;
+        color: #f4f4f6;
+        color-scheme: dark;
+      }
+      #root {
+        min-height: 100%;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        gap: 18px;
+        font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #5c5c68;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <div id="boot">Musicrate</div>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font: 14px/1.6 ui-sans-serif, system-ui, sans-serif">
+        MUSICRATE — это приложение, ему нужен JavaScript. Включите его и обновите страницу.
+      </p>
+    </noscript>
+    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>

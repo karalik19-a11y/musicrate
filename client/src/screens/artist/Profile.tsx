@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router';
 import type { User } from '@shared/types';
 import { MAX_NAME_LENGTH } from '@shared/types';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { DataSourcePanel } from '@/components/DataSourcePanel';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen, ScreenHeader } from '@/components/ui/Screen';
 import { useArtistOverview } from '@/hooks/useTracks';
-import { api } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { nameGradient } from '@/lib/cover';
 import { formatDate, formatInt } from '@/lib/format';
 import { useAuth } from '@/stores/auth';
@@ -35,7 +36,7 @@ export function ArtistProfile() {
     }
     setSaving(true);
     try {
-      const res = await api<{ user: User }>('/me', { method: 'PATCH', body: { name: clean } });
+      const res = await getBackend().rename(clean);
       setUser(res.user);
       setEditing(false);
       toast.success('Имя обновлено');
@@ -103,6 +104,8 @@ export function ArtistProfile() {
           <p className="mt-1">Код доступа больше не нужно вводить на этом устройстве. После выхода твои треки останутся привязаны к тебе — при следующем входе с этого устройства студия восстановится.</p>
         </div>
       </section>
+
+      <DataSourcePanel />
 
       <div className="mt-6">
         <Button variant="outline" size="lg" block icon={<LogOut className="size-4" />} onClick={() => setConfirm(true)}>

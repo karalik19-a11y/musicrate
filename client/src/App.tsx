@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
+import { createHashRouter, Navigate, RouterProvider } from 'react-router';
 import { AppShell } from '@/components/AppShell';
 import { Splash } from '@/components/Splash';
 import { Toaster } from '@/components/ui/Toaster';
@@ -26,7 +26,12 @@ const queryClient = new QueryClient({
   },
 });
 
-const router = createBrowserRouter([
+/**
+ * Hash routing is a deployment decision, not a stylistic one: on GitHub Pages
+ * (and on a `file://` copy of the build) there is no server to rewrite deep
+ * links, so `/#/track/abc` is the only form that survives a refresh.
+ */
+const router = createHashRouter([
   { path: '/', element: <Welcome /> },
   { path: '/artist/access', element: <ArtistAccess /> },
   { path: '/guest', element: <GuestEntry /> },
@@ -67,6 +72,26 @@ export default function App() {
     const t = window.setTimeout(() => setMinSplashDone(true), 350);
     return () => window.clearTimeout(t);
   }, [boot]);
+
+  /** A new identity means a new view of the same data. */
+  useEffect(() => {
+    const onSession = () => queryClient.clear();
+    window.addEventListener('musicrate:session', onSession);
+    return () => window.removeEventListener('musicrate:session', onSession);
+  }, []);
+  /**
+   * Every write to the on-device vault (here or in another tab) re-syncs the
+   * cached views, so a rating submitted on one screen shows up on the artist's
+   * dashboard without a reload.
+   */
+  useEffect(() => {
+    const resync = () => {
+      void queryClient.invalidateQueries({ queryKey: ['tracks'] });
+      void queryClient.invalidateQueries({ queryKey: ['artist'] });
+    };
+    window.addEventListener('musicrate:vault', resync);
+    return () => window.removeEventListener('musicrate:vault', resync);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

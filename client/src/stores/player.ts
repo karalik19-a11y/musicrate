@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { Track } from '@shared/types';
-import { api, ApiError } from '@/lib/api';
+import { ApiError, isGoneError } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { coverToDataUrl } from '@/lib/cover';
 import { toast } from './toast';
 
@@ -53,7 +54,10 @@ function getAudio(): HTMLAudioElement {
     const track = usePlayer.getState().current();
     if (track && playCountedFor !== track.id) {
       playCountedFor = track.id;
-      void api(`/tracks/${track.id}/play`, { method: 'POST' }).catch(() => undefined);
+      void getBackend()
+        .recordPlay(track.id)
+        .then(({ plays }) => usePlayer.setState((s) => ({ queue: s.queue.map((t) => (t.id === track.id ? { ...t, plays } : t)) })))
+        .catch(() => undefined);
     }
   });
   audio.addEventListener('pause', () => {
@@ -82,13 +86,14 @@ function getAudio(): HTMLAudioElement {
     const track = state.current();
     if (!track) return;
     // Find out whether the track disappeared (deleted by the artist) or it is a transient failure.
-    void api(`/tracks/${track.id}`, { silent401: true })
+    void getBackend()
+      .getTrack(track.id)
       .then(() => {
         toast.error('Не удалось воспроизвести', 'Попробуй ещё раз');
         usePlayer.setState({ status: 'paused' });
       })
       .catch((err: unknown) => {
-        if (err instanceof ApiError && (err.status === 410 || err.status === 404)) {
+        if (isGoneError(err)) {
           toast.error('TRACK REMOVED', 'Артист удалил этот трек');
           state.removeTrack(track.id);
         } else {
@@ -134,16 +139,37 @@ function loadAndPlay(track: Track): void {
   const el = getAudio();
   loadedTrackId = track.id;
   playCountedFor = null;
-  el.src = track.audioUrl;
+  el.pause();
+  el.src = '';
   usePlayer.setState({ status: 'loading', currentTime: 0, duration: track.duration });
   updateMediaSession(track);
-  const attempt = el.play();
-  if (attempt) {
-    attempt.catch((err: unknown) => {
-      if ((err as Error).name === 'AbortError') return; // superseded by another play()
-      usePlayer.setState({ status: 'paused' });
+
+  // The data source decides how bytes reach the element: a streamed URL from
+  // the API, or an object URL for the blob kept in the device's IndexedDB.
+  void getBackend()
+    .resolveAudioUrl(track)
+    .then((src) => {
+      if (loadedTrackId !== track.id) return; // something else got tapped meanwhile
+      el.src = src;
+      el.load();
+      const attempt = el.play();
+      if (attempt) {
+        attempt.catch((err: unknown) => {
+          if ((err as Error).name === 'AbortError') return; // superseded by another play()
+          usePlayer.setState({ status: 'paused' });
+        });
+      }
+    })
+    .catch((err: unknown) => {
+      if (loadedTrackId !== track.id) return;
+      if (isGoneError(err)) {
+        toast.error('TRACK REMOVED', 'Артист удалил этот трек');
+        usePlayer.getState().removeTrack(track.id);
+      } else {
+        toast.error('Не удалось загрузить аудио', err instanceof ApiError ? err.message : undefined);
+        usePlayer.setState({ status: 'idle' });
+      }
     });
-  }
 }
 
 /* ------------------------------------------------------------------ */

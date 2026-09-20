@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <title>MUSICRATE — Your sound. Your space.</title>
+    <meta name="description" content="Closed music platform: artists drop tracks, listeners rate them 0–90." />
+    <meta name="theme-color" content="#060607" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MUSICRATE" />
+    <meta name="format-detection" content="telephone=no" />
+    <!-- Relative URLs: the same bundle is served from /docs/app/ on GitHub Pages,
+         from the domain root on Docker/Render, and from any sub-path. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <style>
+      /* Paint the app background before any JS runs: no white flash on iOS. */
+      html,
+      body {
+        margin: 0;
+        background: #060607;
+        color: #f4f4f6;
+        color-scheme: dark;
+      }
+      #root {
+        min-height: 100%;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        gap: 18px;
+        font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #5c5c68;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-ApLpEgUS.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/data-0ODT0Ou4.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-j-GKT1Pb.js">
+    <link rel="modulepreload" crossorigin href="./assets/motion-WsFejSqJ.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-Bo-DwPur.css">
+  </head>
+  <body>
+    <div id="root">
+      <div id="boot">Musicrate</div>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font: 14px/1.6 ui-sans-serif, system-ui, sans-serif">
+        MUSICRATE — это приложение, ему нужен JavaScript. Включите его и обновите страницу.
+      </p>
+    </noscript>
+  </body>
+</html>

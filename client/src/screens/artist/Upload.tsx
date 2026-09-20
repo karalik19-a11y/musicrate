@@ -2,7 +2,7 @@ import { Check, FileAudio, Pause, Play, Rocket, Upload as UploadIcon, X } from '
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import type { Track, User } from '@shared/types';
+import type { Track } from '@shared/types';
 import { ACCEPTED_AUDIO_EXTENSIONS, MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_UPLOAD_BYTES } from '@shared/types';
 import { CoverArt } from '@/components/CoverArt';
 import { Waveform } from '@/components/Waveform';
@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Screen, ScreenHeader } from '@/components/ui/Screen';
 import { Spinner } from '@/components/ui/Spinner';
 import { usePublishTrack } from '@/hooks/useTracks';
-import { api, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { analyzeAudio, probeDuration } from '@/lib/audio-analysis';
 import { formatBytes, formatTime } from '@/lib/format';
 import { tap } from '@/lib/haptics';
@@ -159,6 +160,7 @@ export function ArtistUpload() {
         artistName: artistName.trim(),
         file: picked.file,
         waveform: picked.peaks,
+        duration: picked.duration,
         onProgress: (ratio) => {
           setProgress(ratio);
           if (ratio >= 0.999) setPhase('processing');
@@ -169,7 +171,8 @@ export function ArtistUpload() {
       setPhase('live');
       if (user.name === 'Artist') {
         // first publish: adopt the musician name as the studio profile name
-        void api<{ user: User }>('/me', { method: 'PATCH', body: { name: track.artistName } })
+        void getBackend()
+          .rename(track.artistName)
           .then((res) => setUser(res.user))
           .catch(() => undefined);
       }

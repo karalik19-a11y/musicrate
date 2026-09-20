@@ -18,5 +18,10 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Static Pages bundle is in sync with the client
+        run: |
+          npm run pages:build
+          git diff --exit-code -- docs index.html 404.html .nojekyll \
+            || (echo "::error::docs/ is stale — run \`npm run pages:build\` and commit the result." && exit 1)
       - name: Docker image builds
         run: docker build -t musicrate:ci .

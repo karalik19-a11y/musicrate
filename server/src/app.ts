@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import type { AppContext } from './context.js';
 import { errorHandler } from './lib/errors.js';
 import { attachUser } from './middleware/auth.js';
+import { cors } from './middleware/cors.js';
 import { artistRouter } from './routes/artist.js';
 import { authRouter } from './routes/auth.js';
 import { meRouter } from './routes/me.js';
@@ -19,13 +20,17 @@ export function createApp(ctx: AppContext): Express {
     helmet({
       contentSecurityPolicy: false, // SPA with inline styles from the design system
       crossOriginEmbedderPolicy: false,
-      crossOriginResourcePolicy: { policy: 'same-site' },
+      // `cross-origin`, not `same-site`: the audio element may be pointed at
+      // this API from another origin (the static Pages build), and CORP would
+      // block that media fetch before it ever reaches the CORS layer.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
   app.use(express.json({ limit: '64kb' }));
 
   /* ---------------------------- API ---------------------------- */
   const api = express.Router();
+  api.use(cors(ctx.config.allowedOrigins));
   api.use(attachUser(ctx));
   api.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');

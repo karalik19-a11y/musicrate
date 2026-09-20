@@ -1,10 +1,10 @@
 import { RotateCcw } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import type { AuthResponse } from '@shared/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { api, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { tap } from '@/lib/haptics';
 import { homeFor, useAuth } from '@/stores/auth';
 import { EntryLayout } from './EntryLayout';
@@ -25,7 +25,7 @@ export function GuestRestore() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<AuthResponse>('/auth/guest/restore', { method: 'POST', body: { code: code.trim() } });
+      const res = await getBackend().restoreGuest(code.trim());
       tap([10, 30, 10]);
       setSession(res);
       navigate('/home', { replace: true, state: { welcome: true } });

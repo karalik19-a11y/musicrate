@@ -3,7 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
+/**
+ * `PAGES=1 npm run build` produces a fully static bundle:
+ *   • relative asset URLs (`./assets/…`) so it works from any sub-path
+ *     (github.io/<repo>/docs/app/, a custom domain, or a `file://` copy);
+ *   • no `/api` proxy assumptions — the client picks its data source at boot.
+ */
+const isPages = process.env.PAGES === '1';
+
 export default defineConfig({
+  base: isPages ? './' : '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -21,6 +30,11 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',

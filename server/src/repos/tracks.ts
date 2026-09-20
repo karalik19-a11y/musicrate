@@ -1,4 +1,5 @@
 import type { ArtistOverview, RatingInput, Track, TrackSort } from '@shared/types';
+import { averageOfTotals, summarizeRatings, totalOf } from '@shared/scoring';
 import type { Database } from '../db/index.js';
 import { publicId } from '../lib/crypto.js';
 
@@ -15,11 +16,11 @@ interface TrackRow {
   cover_seed: string;
   created_at: number;
   deleted_at: number | null;
-  // aggregates
+  // aggregates (raw sums; averaging happens in @shared/scoring)
   rating_count: number;
-  avg_quality: number | null;
-  avg_listenability: number | null;
-  avg_personal: number | null;
+  sum_quality: number;
+  sum_listenability: number;
+  sum_personal: number;
   play_count: number;
   // viewer's own rating
   my_quality: number | null;
@@ -46,14 +47,16 @@ export interface Viewer {
 /**
  * Aggregates are computed in SQL from the raw ratings/plays tables on every
  * read. Nothing is ever cached or hand-edited, so the public score is always
- * the exact function of real user ratings.
+ * the exact function of real user ratings. SQLite only produces SUMs; the
+ * averaging/rounding itself lives in `@shared/scoring` so that the browser
+ * fallback engine produces byte-identical numbers.
  */
 const SELECT_TRACK = `
   SELECT t.*,
-         (SELECT COUNT(*)            FROM ratings r WHERE r.track_id = t.id) AS rating_count,
-         (SELECT AVG(quality)        FROM ratings r WHERE r.track_id = t.id) AS avg_quality,
-         (SELECT AVG(listenability)  FROM ratings r WHERE r.track_id = t.id) AS avg_listenability,
-         (SELECT AVG(personal)       FROM ratings r WHERE r.track_id = t.id) AS avg_personal,
+         (SELECT COUNT(*)                   FROM ratings r WHERE r.track_id = t.id) AS rating_count,
+         (SELECT COALESCE(SUM(quality), 0)       FROM ratings r WHERE r.track_id = t.id) AS sum_quality,
+         (SELECT COALESCE(SUM(listenability), 0) FROM ratings r WHERE r.track_id = t.id) AS sum_listenability,
+         (SELECT COALESCE(SUM(personal), 0)      FROM ratings r WHERE r.track_id = t.id) AS sum_personal,
          (SELECT COUNT(*)            FROM plays   p WHERE p.track_id = t.id) AS play_count,
          my.quality       AS my_quality,
          my.listenability AS my_listenability,
@@ -65,19 +68,17 @@ const SELECT_TRACK = `
 
 const ORDER_BY: Record<TrackSort, string> = {
   new: 't.created_at DESC',
-  top: '(COALESCE(avg_quality,0) + COALESCE(avg_listenability,0) + COALESCE(avg_personal,0)) DESC, rating_count DESC, t.created_at DESC',
+  top: '(COALESCE(sum_quality,0) + COALESCE(sum_listenability,0) + COALESCE(sum_personal,0)) DESC, rating_count DESC, t.created_at DESC',
   played: 'play_count DESC, t.created_at DESC',
 };
 
-function round(value: number, digits: number): number {
-  const f = 10 ** digits;
-  return Math.round(value * f) / f;
-}
-
 function toTrack(row: TrackRow, viewer: Viewer): Track {
-  const q = row.avg_quality == null ? 0 : Number(row.avg_quality);
-  const l = row.avg_listenability == null ? 0 : Number(row.avg_listenability);
-  const p = row.avg_personal == null ? 0 : Number(row.avg_personal);
+  const summary = summarizeRatings({
+    count: Number(row.rating_count),
+    quality: Number(row.sum_quality),
+    listenability: Number(row.sum_listenability),
+    personal: Number(row.sum_personal),
+  });
   const hasMine = row.my_quality != null;
 
   return {
@@ -93,19 +94,17 @@ function toTrack(row: TrackRow, viewer: Viewer): Track {
     createdAt: Number(row.created_at),
     audioUrl: `/api/tracks/${row.id}/audio`,
     plays: Number(row.play_count),
-    rating: {
-      count: Number(row.rating_count),
-      quality: round(q, 2),
-      listenability: round(l, 2),
-      personal: round(p, 2),
-      total: round(q + l + p, 2),
-    },
+    rating: summary,
     myRating: hasMine
       ? {
           quality: Number(row.my_quality),
           listenability: Number(row.my_listenability),
           personal: Number(row.my_personal),
-          total: Number(row.my_quality) + Number(row.my_listenability) + Number(row.my_personal),
+          total: totalOf({
+            quality: Number(row.my_quality),
+            listenability: Number(row.my_listenability),
+            personal: Number(row.my_personal),
+          }),
           updatedAt: Number(row.my_updated_at),
         }
       : null,
@@ -213,30 +212,48 @@ export class TracksRepo {
     return true;
   }
 
+  /**
+   * Studio stats. The average score is derived from the same shared scoring
+   * helper as every public rating, so the studio and the guest feed can never
+   * disagree.
+   */
   async artistOverview(artistId: string): Promise<ArtistOverview> {
-    const row = await this.db.get<{
-      tracks: number;
-      plays: number;
-      ratings: number;
-      avg_total: number | null;
-    }>(
+    const row = await this.db.get<{ tracks: number; plays: number; ratings: number }>(
       `SELECT COUNT(*) AS tracks,
               COALESCE(SUM((SELECT COUNT(*) FROM plays p WHERE p.track_id = t.id)), 0)   AS plays,
-              COALESCE(SUM((SELECT COUNT(*) FROM ratings r WHERE r.track_id = t.id)), 0) AS ratings,
-              (SELECT AVG(total) FROM (
-                 SELECT AVG(quality) + AVG(listenability) + AVG(personal) AS total
-                   FROM ratings r JOIN tracks tt ON tt.id = r.track_id
-                  WHERE tt.artist_id = ? AND tt.deleted_at IS NULL
-                  GROUP BY r.track_id)) AS avg_total
+              COALESCE(SUM((SELECT COUNT(*) FROM ratings r WHERE r.track_id = t.id)), 0) AS ratings
          FROM tracks t
         WHERE t.artist_id = ? AND t.deleted_at IS NULL`,
-      [artistId, artistId],
+      [artistId],
     );
+    const sums = await this.db.all<{
+      rating_count: number;
+      sum_quality: number;
+      sum_listenability: number;
+      sum_personal: number;
+    }>(
+      `SELECT (SELECT COUNT(*) FROM ratings r WHERE r.track_id = t.id)                  AS rating_count,
+              (SELECT COALESCE(SUM(quality), 0)       FROM ratings r WHERE r.track_id = t.id) AS sum_quality,
+              (SELECT COALESCE(SUM(listenability), 0) FROM ratings r WHERE r.track_id = t.id) AS sum_listenability,
+              (SELECT COALESCE(SUM(personal), 0)      FROM ratings r WHERE r.track_id = t.id) AS sum_personal
+         FROM tracks t
+        WHERE t.artist_id = ? AND t.deleted_at IS NULL`,
+      [artistId],
+    );
+    const totals = sums
+      .filter((s) => Number(s.rating_count) > 0)
+      .map((s) => summarizeRatings({
+        count: Number(s.rating_count),
+        quality: Number(s.sum_quality),
+        listenability: Number(s.sum_listenability),
+        personal: Number(s.sum_personal),
+      }).total);
+
     return {
       tracks: Number(row?.tracks ?? 0),
       plays: Number(row?.plays ?? 0),
       ratings: Number(row?.ratings ?? 0),
-      averageScore: row?.avg_total == null ? null : round(Number(row.avg_total), 1),
+      averageScore: averageOfTotals(totals),
     };
   }
 }

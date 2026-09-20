@@ -24,6 +24,13 @@ export interface Config {
   databaseAuthToken: string | undefined;
   /** Directory with the built client (served in production). */
   clientDist: string;
+  /**
+   * Origins allowed to call the API from a browser. The static GitHub Pages
+   * build is a different origin from the API, so this is what makes
+   * "Pages shell + own backend" work. `*` (default) is safe here because the
+   * API is bearer-token authenticated and never reads cookies.
+   */
+  allowedOrigins: string[];
   maxUploadBytes: number;
   /** Lifetime of a session in ms (rolling). */
   sessionTtlMs: number;
@@ -49,6 +56,10 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     databaseUrl: process.env.DATABASE_URL || `file:${path.join(dataDir, 'musicrate.db')}`,
     databaseAuthToken: process.env.DATABASE_AUTH_TOKEN || undefined,
     clientDist: path.resolve(process.env.CLIENT_DIST || path.join(repoRoot, 'client', 'dist')),
+    allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '*')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
     maxUploadBytes: int(process.env.MAX_UPLOAD_MB, 0) * 1024 * 1024 || MAX_UPLOAD_BYTES,
     sessionTtlMs: int(process.env.SESSION_TTL_DAYS, 365) * 24 * 60 * 60 * 1000,
     ...overrides,
