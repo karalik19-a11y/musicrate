@@ -20,6 +20,73 @@
          button, haptics, theme). `defer` keeps document order, so it always
          runs before the app module below. -->
     <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      // GitHub Pages SPA fallback: if 404.html redirected with ?p=/..., restore original URL.
+      // See https://github.com/rafgraph/spa-github-pages
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <script defer>
+      // Early Telegram hash fix: Telegram injects #tgWebAppData=... into location.hash,
+      // which collides with hash routing (#/track/123) and would render NotFound
+      // ("LOST IN THE MIX"). The SDK has already read the hash by now (defer order),
+      // so we can safely rewrite it to a valid app route before the router starts.
+      try {
+        var h = window.location.hash || '';
+        var s = window.location.search || '';
+        var isTgHash = h.indexOf('tgWebAppData') !== -1 || h.indexOf('tgWebAppVersion') !== -1;
+        if (isTgHash) {
+          try {
+            sessionStorage.setItem('tg:hash', h);
+          } catch (e) {}
+          var sp = null;
+          // search ?tgWebAppStartParam=...
+          var mSearch = s.match(/[?&]tgWebAppStartParam=([^&]+)/);
+          if (mSearch) sp = decodeURIComponent(mSearch[1]);
+          // hash #...tgWebAppStartParam=...
+          if (!sp) {
+            var mHash = h.match(/tgWebAppStartParam=([^&]+)/);
+            if (mHash) sp = decodeURIComponent(mHash[1]);
+          }
+          var trackId = null;
+          if (sp) {
+            if (sp.indexOf('track_') === 0) trackId = sp.slice(6);
+            else trackId = sp;
+          }
+          if (trackId) {
+            var newHash = '#/track/' + encodeURIComponent(trackId);
+            if (h !== newHash) {
+              history.replaceState(null, '', location.pathname + s + newHash);
+            }
+          } else {
+            // Try to keep existing app route if present before Telegram params
+            var routeMatch = h.match(/^#(\/[^&?#]*)/);
+            if (routeMatch) {
+              var route = routeMatch[1];
+              var keep = route === '/' || route.indexOf('/track/') === 0 || route.indexOf('/home') === 0 || route.indexOf('/discover') === 0 || route.indexOf('/studio') === 0 || route.indexOf('/profile') === 0 || route.indexOf('/guest') === 0 || route.indexOf('/artist') === 0;
+              if (keep) {
+                var cleanHash = '#' + route;
+                if (h !== cleanHash) history.replaceState(null, '', location.pathname + s + cleanHash);
+              } else {
+                if (h !== '#/') history.replaceState(null, '', location.pathname + s + '#/');
+              }
+            } else {
+              if (h !== '#/') history.replaceState(null, '', location.pathname + s + '#/');
+            }
+          }
+        }
+      } catch (e) {}
+    </script>
     <!-- Relative URLs: the same bundle is served from /docs/app/ on GitHub Pages,
          from the domain root on Docker/Render, and from any sub-path. -->
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -49,7 +116,7 @@
         color: #5c5c68;
       }
     </style>
-    <script type="module" crossorigin src="./assets/index-B60u_Z_9.js"></script>
+    <script type="module" crossorigin src="./assets/index-DAOtNoUC.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/data-0ODT0Ou4.js">
     <link rel="modulepreload" crossorigin href="./assets/react-Csu-YM3W.js">
     <link rel="modulepreload" crossorigin href="./assets/motion-WsFejSqJ.js">

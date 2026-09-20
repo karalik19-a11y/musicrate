@@ -105,9 +105,21 @@ describe('telegram message texts', () => {
   });
 
   it('builds deep links into the mini app for any webapp URL shape', () => {
-    expect(trackButtonUrl('https://example.com/musicrate/', 'abc123')).toBe('https://example.com/musicrate/#/track/abc123');
-    expect(trackButtonUrl('https://example.com', 'abc123')).toBe('https://example.com/#/track/abc123');
-    expect(trackButtonUrl('https://example.com/app//', 'x')).toBe('https://example.com/app/#/track/x');
+    // New format includes ?tgWebAppStartParam= for Telegram hash survival + #/track/ fallback
+    expect(trackButtonUrl('https://example.com/musicrate/', 'abc123')).toBe(
+      'https://example.com/musicrate/?tgWebAppStartParam=track_abc123#/track/abc123',
+    );
+    expect(trackButtonUrl('https://example.com', 'abc123')).toBe(
+      'https://example.com/?tgWebAppStartParam=track_abc123#/track/abc123',
+    );
+    expect(trackButtonUrl('https://example.com/app//', 'x')).toBe(
+      'https://example.com/app/?tgWebAppStartParam=track_x#/track/x',
+    );
+    // Still contains the id in both query and hash
+    const url = trackButtonUrl('https://example.com/musicrate/', 'abc123');
+    expect(url).toContain('abc123');
+    expect(url).toContain('tgWebAppStartParam');
+    expect(url).toContain('#/track/');
   });
 
   it('keeps the app button URL as configured', () => {
@@ -291,9 +303,12 @@ describe('TelegramBot against a mocked Bot API', () => {
     const announce = sentTo(4242).at(-1)!.payload;
     expect(announce.text).toContain('«Drop» — Mira');
     expect(announce.text).toContain('⏱ 1:01');
-    expect(announce.reply_markup.inline_keyboard[0][0].web_app.url).toBe(
-      'https://example.com/musicrate/#/track/track_xyz',
-    );
+    const deepLink = announce.reply_markup.inline_keyboard[0][0].web_app.url as string;
+    expect(deepLink).toContain('track_xyz');
+    expect(deepLink).toContain('tgWebAppStartParam');
+    expect(deepLink).toContain('#/track/');
+    // Exact new format
+    expect(deepLink).toBe('https://example.com/musicrate/?tgWebAppStartParam=track_track_xyz#/track/track_xyz');
 
     // Blocking the bot (my_chat_member → kicked) silently unsubscribes.
     mock.push({

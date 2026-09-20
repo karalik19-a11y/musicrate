@@ -20,7 +20,20 @@ import { GuestHome } from '@/screens/guest/Home';
 import { GuestProfile } from '@/screens/guest/Profile';
 import { useAuth } from '@/stores/auth';
 import { usePlayer } from '@/stores/player';
-import { detectTelegram } from '@/lib/telegram';
+import { detectTelegram, normalizeTelegramHash } from '@/lib/telegram';
+
+// Telegram injects launch data into location.hash as #tgWebAppData=...,
+// which collides with hash routing (#/track/123). The SDK has already read
+// the hash by now (defer order), so we can safely rewrite it to a valid
+// app route before the router is created. Without this, opening from a
+// Telegram web_app button shows "LOST IN THE MIX" (NotFound).
+if (typeof window !== 'undefined') {
+  try {
+    normalizeTelegramHash();
+  } catch {
+    /* never block boot */
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

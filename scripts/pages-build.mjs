@@ -13,7 +13,9 @@
  *   .nojekyll            skip Jekyll so the bundle is served byte-for-byte
  *
  * Deep links live in the hash (`/#/track/abc`), which is exactly why they work
- * on a static host without any rewrite rules.
+ * on a static host without any rewrite rules. Telegram injects its own
+ * #tgWebAppData=... into the hash, so the launcher must preserve search+hash
+ * and the client must normalize it before the router starts.
  *
  * Usage: npm run pages:build   (then commit docs/ + index.html)
  *
@@ -58,10 +60,26 @@ const LAUNCHER = `<!doctype html>
   </head>
   <body>
     <script>
-      // forward ?api=… (data source override) and the current route to the app
-      var target = './docs/index.html' + location.search + location.hash;
-      if (location.pathname.replace(/\\/+$/, '').endsWith('/404')) target = './docs/index.html';
-      location.replace(target);
+      // GitHub Pages root launcher → ./docs/index.html
+      // Must preserve ?query and #hash — Telegram injects its launch data
+      // into #hash as #tgWebAppData=... which would otherwise be lost and
+      // the app would show "LOST IN THE MIX" (NotFound).
+      // Also preserve tgWebAppStartParam for track deep links.
+      (function () {
+        var search = location.search || '';
+        var hash = location.hash || '';
+        var target = './docs/index.html' + search + hash;
+        try {
+          var path = location.pathname;
+          var segs = path.split('/').filter(Boolean);
+          var base = segs.length ? '/' + segs[0] + '/' : '/';
+          if (path.indexOf('/docs/') === -1 && segs.length > 1) {
+            // Deep path like /musicrate/track/123 served as 404 — use absolute base
+            target = base + 'docs/index.html' + search + hash;
+          }
+        } catch (e) {}
+        location.replace(target);
+      })();
     </script>
     <p style="font:14px/1.6 ui-sans-serif,system-ui,sans-serif;color:#8a8a95;padding:24px">
       <a style="color:#d7ff3f" href="./docs/index.html">Открыть MUSICRATE</a>
