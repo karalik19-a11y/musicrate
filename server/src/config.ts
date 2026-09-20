@@ -34,6 +34,12 @@ export interface Config {
   maxUploadBytes: number;
   /** Lifetime of a session in ms (rolling). */
   sessionTtlMs: number;
+  /** Telegram bot token from @BotFather. No token → no bot, everything else works. */
+  telegramBotToken: string | undefined;
+  /** HTTPS URL of the web app the bot's "open" buttons launch (Telegram mini app). */
+  telegramWebappUrl: string;
+  /** Bot API origin: api.telegram.org by default, or a self-hosted local Bot API server. */
+  telegramApiUrl: string;
 }
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
@@ -62,6 +68,11 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       .filter(Boolean),
     maxUploadBytes: int(process.env.MAX_UPLOAD_MB, 0) * 1024 * 1024 || MAX_UPLOAD_BYTES,
     sessionTtlMs: int(process.env.SESSION_TTL_DAYS, 365) * 24 * 60 * 60 * 1000,
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN?.trim() || undefined,
+    // The public Pages build is the canonical mini app URL; self-hosted
+    // deployments point this at their own HTTPS origin instead.
+    telegramWebappUrl: process.env.TELEGRAM_WEBAPP_URL?.trim() || 'https://karalik19-a11y.github.io/musicrate/',
+    telegramApiUrl: process.env.TELEGRAM_API_URL?.trim() || 'https://api.telegram.org',
     ...overrides,
   };
 }

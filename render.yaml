@@ -25,3 +25,7 @@ services:
         value: /var/data
       - key: ARTIST_PASSWORD
         sync: false   # set in the dashboard
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false   # token from @BotFather; unset = bot disabled
+      - key: TELEGRAM_WEBAPP_URL
+        sync: false   # HTTPS mini-app URL (defaults to the GitHub Pages build)

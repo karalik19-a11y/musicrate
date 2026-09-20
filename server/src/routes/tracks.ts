@@ -165,6 +165,14 @@ export function tracksRouter(ctx: AppContext): Router {
           { id: req.user!.id },
         );
         res.status(201).json({ track });
+
+        // Announce the drop to every Telegram subscriber in the background —
+        // the artist's upload must never wait on (or fail because of) Telegram.
+        if (ctx.notifier) {
+          void ctx.notifier.notifyNewTrack(track).catch((err) => {
+            console.error('[telegram] new-track notification failed:', err instanceof Error ? err.message : err);
+          });
+        }
       } catch (err) {
         await ctx.storage.delete(fileKey);
         throw err;

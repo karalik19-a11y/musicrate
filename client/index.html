@@ -15,6 +15,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MUSICRATE" />
     <meta name="format-detection" content="telephone=no" />
+    <!-- Telegram Mini App SDK: inert outside Telegram, and when the app is
+         opened from the bot it provides the native shell (fullscreen, back
+         button, haptics, theme). `defer` keeps document order, so it always
+         runs before the app module below. -->
+    <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Relative URLs: the same bundle is served from /docs/app/ on GitHub Pages,
          from the domain root on Docker/Render, and from any sub-path. -->
     <link rel="manifest" href="./manifest.webmanifest" />

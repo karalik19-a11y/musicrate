@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError } from '@/lib/api';
 import { getBackend } from '@/lib/backend';
+import { telegramFirstName } from '@/lib/telegram';
 import { tap } from '@/lib/haptics';
 import { homeFor, useAuth } from '@/stores/auth';
 import { EntryLayout } from './EntryLayout';
@@ -14,7 +15,9 @@ export function GuestNew() {
   const navigate = useNavigate();
   const user = useAuth((s) => s.user);
   const setSession = useAuth((s) => s.setSession);
-  const [name, setName] = useState('');
+  // Inside Telegram the name field starts pre-filled with the user's own
+  // first name (shared with the mini app); in a browser it stays empty.
+  const [name, setName] = useState(() => telegramFirstName(MAX_NAME_LENGTH));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { createHashRouter, Navigate, RouterProvider } from 'react-router';
+import { createHashRouter, Navigate, Outlet, RouterProvider, useLocation, useNavigate } from 'react-router';
 import { AppShell } from '@/components/AppShell';
 import { Splash } from '@/components/Splash';
 import { Toaster } from '@/components/ui/Toaster';
@@ -19,6 +19,8 @@ import { Discover } from '@/screens/guest/Discover';
 import { GuestHome } from '@/screens/guest/Home';
 import { GuestProfile } from '@/screens/guest/Profile';
 import { useAuth } from '@/stores/auth';
+import { usePlayer } from '@/stores/player';
+import { detectTelegram } from '@/lib/telegram';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,35 +34,98 @@ const queryClient = new QueryClient({
  * links, so `/#/track/abc` is the only form that survives a refresh.
  */
 const router = createHashRouter([
-  { path: '/', element: <Welcome /> },
-  { path: '/artist/access', element: <ArtistAccess /> },
-  { path: '/guest', element: <GuestEntry /> },
-  { path: '/guest/new', element: <GuestNew /> },
-  { path: '/guest/restore', element: <GuestRestore /> },
   {
-    element: <AppShell role="guest" />,
+    // Pathless layout around every route: hosts the Telegram bridge below.
+    element: (
+      <>
+        <TelegramBridge />
+        <Outlet />
+      </>
+    ),
     children: [
-      { path: '/home', element: <GuestHome /> },
-      { path: '/discover', element: <Discover /> },
-      { path: '/profile', element: <GuestProfile /> },
+      { path: '/', element: <Welcome /> },
+      { path: '/artist/access', element: <ArtistAccess /> },
+      { path: '/guest', element: <GuestEntry /> },
+      { path: '/guest/new', element: <GuestNew /> },
+      { path: '/guest/restore', element: <GuestRestore /> },
+      {
+        element: <AppShell role="guest" />,
+        children: [
+          { path: '/home', element: <GuestHome /> },
+          { path: '/discover', element: <Discover /> },
+          { path: '/profile', element: <GuestProfile /> },
+        ],
+      },
+      {
+        element: <AppShell role="artist" />,
+        children: [
+          { path: '/studio', element: <ArtistDashboard /> },
+          { path: '/studio/tracks', element: <ArtistTracks /> },
+          { path: '/studio/upload', element: <ArtistUpload /> },
+          { path: '/studio/profile', element: <ArtistProfile /> },
+        ],
+      },
+      {
+        element: <AppShell />,
+        children: [{ path: '/track/:id', element: <TrackPage /> }],
+      },
+      { path: '/index.html', element: <Navigate to="/" replace /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
-  {
-    element: <AppShell role="artist" />,
-    children: [
-      { path: '/studio', element: <ArtistDashboard /> },
-      { path: '/studio/tracks', element: <ArtistTracks /> },
-      { path: '/studio/upload', element: <ArtistUpload /> },
-      { path: '/studio/profile', element: <ArtistProfile /> },
-    ],
-  },
-  {
-    element: <AppShell />,
-    children: [{ path: '/track/:id', element: <TrackPage /> }],
-  },
-  { path: '/index.html', element: <Navigate to="/" replace /> },
-  { path: '*', element: <NotFound /> },
 ]);
+
+/**
+ * Telegram mini-app chrome, wired to the router: the native ← BackButton
+ * mirrors in-app navigation (hidden on tab roots and when there is nothing to
+ * go back to), and closing the app mid-track asks for confirmation first.
+ * Renders null outside Telegram.
+ */
+function TelegramBridge() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasTrack = usePlayer((s) => s.index >= 0);
+
+  // Tab roots: screens where "back" would mean leaving the app entirely.
+  const isRoot = ['/', '/home', '/discover', '/profile', '/studio'].includes(location.pathname);
+
+  useEffect(() => {
+    const app = detectTelegram();
+    const backButton = app?.BackButton;
+    if (!app || !backButton) return;
+
+    // react-router keeps its history index in window.history.state.idx; a deep
+    // link (notification → straight to a track) starts at 0, so the button
+    // stays hidden there instead of looking broken.
+    const canGoBack = Number(window.history.state?.idx ?? 0) > 0;
+    const onBack = () => navigate(-1);
+
+    if (!isRoot && canGoBack) {
+      backButton.onClick(onBack);
+      backButton.show();
+    } else {
+      backButton.hide();
+    }
+    return () => {
+      backButton.offClick(onBack);
+      backButton.hide();
+    };
+  }, [isRoot, location, navigate]);
+
+  useEffect(() => {
+    const app = detectTelegram();
+    if (!app) return;
+    try {
+      // A track in the player is worth one "really close?" tap.
+      if (hasTrack) app.enableClosingConfirmation();
+      else app.disableClosingConfirmation();
+    } catch {
+      /* older Telegram clients */
+    }
+  }, [hasTrack]);
+
+  return null;
+}
 
 export default function App() {
   const status = useAuth((s) => s.status);
