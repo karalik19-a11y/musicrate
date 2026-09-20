@@ -112,6 +112,14 @@ export class TelegramBot implements NewTrackNotifier {
     this.stopController.abort();
   }
 
+  /** Diagnostics for GET /api/telegram/status (no secrets). */
+  status(): { running: boolean; username: string | null } {
+    return {
+      running: this.running,
+      username: this.username ? `@${this.username}` : null,
+    };
+  }
+
   /**
    * Announces a freshly published track to every subscriber. Called
    * fire-and-forget from the publish route, so this never throws.

@@ -13,6 +13,61 @@ import {
   welcomeMessage,
 } from '../src/telegram/messages.js';
 
+/* ------------------- mini app must be frameable by Telegram ------------------- */
+
+describe('Telegram Web can embed the app (frame headers)', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await createTestEnv();
+  });
+  afterAll(() => env.cleanup());
+
+  it('does not send X-Frame-Options and allows only Telegram as frame ancestor', async () => {
+    const res = await api(env.app).get('/api/health');
+    expect(res.headers['x-frame-options']).toBeUndefined();
+    expect(res.headers['content-security-policy']).toBe('frame-ancestors https://*.telegram.org;');
+  });
+});
+
+/* ---------------------------- status endpoint ---------------------------- */
+
+describe('GET /api/telegram/status', () => {
+  it('reports a disabled bot and the subscriber count when no token is set', async () => {
+    const env = await createTestEnv();
+    try {
+      await env.ctx.telegram.subscribe(100);
+      await env.ctx.telegram.subscribe(200);
+      const res = await api(env.app).get('/api/telegram/status');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        enabled: false,
+        running: false,
+        bot: null,
+        webappUrl: 'https://karalik19-a11y.github.io/musicrate/',
+        subscribers: 2,
+      });
+    } finally {
+      env.cleanup();
+    }
+  });
+
+  it('reports an enabled-but-not-running bot when a token is configured', async () => {
+    // env must not be 'test' for the bot to be constructed (it is never started here)
+    const env = await createTestEnv({ env: 'development', telegramBotToken: 'X:Y' });
+    try {
+      const res = await api(env.app).get('/api/telegram/status');
+      expect(res.status).toBe(200);
+      expect(res.body.enabled).toBe(true);
+      expect(res.body.running).toBe(false); // not started / token never validated
+      expect(res.body.bot).toBeNull();
+      expect(env.ctx.bot).not.toBeNull();
+    } finally {
+      env.cleanup();
+    }
+  });
+});
+
+
 /* ---------------------------- pure formatting ---------------------------- */
 
 describe('telegram message texts', () => {
