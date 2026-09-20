@@ -4,7 +4,12 @@ name: Pages
 # static bundle lives in the repo (`docs/`) and a launcher at `index.html`.
 # This workflow rebuilds it and commits it back, which keeps
 # https://<owner>.github.io/musicrate/ pointing at the current client without
-# anyone having to touch the Pages settings.
+# anyone having to touch the Pages settings. Because Pages cannot run the API,
+# the bundle is configured for the shared Render API; set the repository
+# variable MUSICRATE_API_URL to use another API host.
+
+env:
+  MUSICRATE_API_URL: ${{ vars.MUSICRATE_API_URL || 'https://musicrate.onrender.com' }}
 on:
   push:
     branches: [main]

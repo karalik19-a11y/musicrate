@@ -16,6 +16,10 @@
  * on a static host without any rewrite rules.
  *
  * Usage: npm run pages:build   (then commit docs/ + index.html)
+ *
+ * A Pages site has no server of its own, so it must point at the shared API.
+ * `VITE_API_URL` (or `MUSICRATE_API_URL`) can override the default Render
+ * service URL when the project is deployed somewhere else.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -25,6 +29,13 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'client', 'dist');
 const outDir = path.join(root, 'docs');
+
+// GitHub Pages is only a static shell. Without an API every browser gets its
+// own IndexedDB vault, which makes an artist's uploads invisible to guests on
+// other devices. Keep the public Pages build on the shared production API by
+// default, while allowing forks and self-hosted deployments to override it.
+const pagesApiUrl =
+  process.env.VITE_API_URL ?? process.env.MUSICRATE_API_URL ?? 'https://musicrate.onrender.com';
 
 const LAUNCHER = `<!doctype html>
 <html lang="ru">
@@ -63,7 +74,7 @@ function build() {
   console.log('[pages] vite build (PAGES=1)');
   execFileSync('npm', ['run', 'build', '--silent'], {
     cwd: path.join(root, 'client'),
-    env: { ...process.env, PAGES: '1' },
+    env: { ...process.env, PAGES: '1', VITE_API_URL: pagesApiUrl },
     stdio: 'inherit',
   });
 }

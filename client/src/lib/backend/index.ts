@@ -8,8 +8,8 @@
  *      `musicrate.apiBase` localStorage entry, or the `VITE_API_URL` build var;
  *   2. otherwise a quick probe of same-origin `/api/health` (Docker / Render /
  *      Fly serve the client and the API together, so this is the common case);
- *   3. otherwise the in-browser local engine, which is what a plain GitHub
- *      Pages link ends up on.
+ *   3. otherwise the in-browser local engine. The public Pages build is baked
+ *      with an API URL so it does not silently split data by device.
  *
  * Switching is a one-tap thing in the profile screen, no rebuild required.
  */
@@ -22,6 +22,7 @@ import type { Backend, BackendKind } from './types';
 export type { Backend, BackendKind, PublishInput } from './types';
 
 const STORAGE_KEY = 'musicrate.apiBase';
+const LOCAL_OVERRIDE = 'local';
 
 export interface BackendInfo {
   kind: BackendKind;
@@ -74,18 +75,26 @@ function readQueryOverride(): string | null | undefined {
   return undefined;
 }
 
-function storedBase(): string | null {
+/**
+ * `undefined` means there is no user override. `null` is a persisted explicit
+ * local choice, which must stay distinguishable from "no value" when a static
+ * build contains a default VITE_API_URL.
+ */
+function storedBase(): string | null | undefined {
   try {
-    return window.localStorage.getItem(STORAGE_KEY)?.replace(/\/+$/, '') ?? null;
+    const value = window.localStorage.getItem(STORAGE_KEY);
+    if (value === null) return undefined;
+    if (!value || value.toLowerCase() === LOCAL_OVERRIDE || value.toLowerCase() === 'off') return null;
+    return value.replace(/\/+$/, '');
   } catch {
-    return null;
+    return undefined;
   }
 }
 
 function persistBase(base: string | null): void {
   try {
     if (base) window.localStorage.setItem(STORAGE_KEY, base);
-    else window.localStorage.removeItem(STORAGE_KEY);
+    else window.localStorage.setItem(STORAGE_KEY, LOCAL_OVERRIDE);
   } catch {
     /* private mode: the override simply won't survive a reload */
   }
@@ -98,7 +107,7 @@ function explicitBase(): string | null {
     return override;
   }
   const stored = storedBase();
-  if (stored !== null) return stored;
+  if (stored !== undefined) return stored;
   const fromBuild = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '');
   return fromBuild || null;
 }
