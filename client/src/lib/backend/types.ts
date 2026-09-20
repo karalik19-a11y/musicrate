@@ -3,8 +3,8 @@
  *
  * Two backends ship with the app:
  *   • `http`  — talks to the Node/Express + SQLite API in `/server`
- *   • `local` — the in-browser engine (IndexedDB + Blob storage) used by the
- *               static GitHub Pages build when no API host is configured
+ *   • `local` — the in-browser engine (IndexedDB + Blob storage) used only
+ *               when no API host is configured or local mode is explicitly chosen
  *
  * Screens only ever talk to this interface, which is why the same UI works on
  * a full deployment and on a plain Pages link.
