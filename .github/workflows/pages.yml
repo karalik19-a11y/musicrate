@@ -49,3 +49,26 @@ jobs:
             echo "docs/ is already up to date"
           fi
 
+# ── Optional: publish as a Pages *artifact* instead of a committed bundle ──
+# Only useful if Settings → Pages → Source is switched from "Deploy from a
+# branch" to "GitHub Actions". With the current settings this job would fail,
+# so it stays commented out; uncomment both steps when you flip the switch.
+#
+#  deploy:
+#    runs-on: ubuntu-latest
+#    permissions:
+#      pages: write
+#      id-token: write
+#    environment:
+#      name: github-pages
+#      url: ${{ steps.deployment.outputs.page_url }}
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-node@v4
+#        with: { node-version: 22, cache: npm }
+#      - run: npm ci
+#      - run: npm run pages:build
+#      - uses: actions/upload-pages-artifact@v3
+#        with: { path: docs }
+#      - id: deployment
+#        uses: actions/deploy-pages@v4

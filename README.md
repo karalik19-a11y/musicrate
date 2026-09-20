@@ -10,6 +10,7 @@
 [![CI](https://github.com/karalik19-a11y/musicrate/actions/workflows/ci.yml/badge.svg)](https://github.com/karalik19-a11y/musicrate/actions/workflows/ci.yml)
 ![Node](https://img.shields.io/badge/node-%E2%89%A5%2020.19-black)
 ![Stack](https://img.shields.io/badge/React%2019%20%C2%B7%20Vite%207%20%C2%B7%20Tailwind%20v4%20%C2%B7%20Express%205%20%C2%B7%20SQLite-black)
+![Pages](https://github.com/karalik19-a11y/musicrate/actions/workflows/pages.yml/badge.svg)
 [![Открыть приложение](https://img.shields.io/badge/%E2%96%B6_OPEN_APP-karalik19--a11y.github.io%2Fmusicrate-d7ff3f?style=for-the-badge)](https://karalik19-a11y.github.io/musicrate/)
 
 <img src="docs/screenshots/onboarding.jpg" alt="Welcome → Artist access → Guest → Имя" width="100%">
@@ -41,6 +42,7 @@ MUSICRATE — mobile-first веб-приложение в духе iOS-прил�
 - **Плеер**: HTML5 Audio, постоянный мини-плеер над таб-баром, полноэкранный плеер с большой обложкой, «живой» waveform с перемоткой по тапу, ±10 секунд, предыдущий/следующий, Media Session (управление с локскрина).
 - **Обложки** генерируются детерминированно из seed трека — у каждого трека своя палитра, форма и типографика; никаких загрузок картинок.
 - **Рейтинги — публичные всегда**, даже при одной оценке: `ОБЩАЯ ОЦЕНКА N/90 · k оценок` + `КАЧЕСТВО / СЛУШАБЕЛЬНОСТЬ / ЛИЧНАЯ ОЦЕНКА` (среднее /30 с одним знаком). После оценки всё обновляется без перезагрузки: карточка, страница, плеер, кабинет артиста.
+- **Два источника данных**: общий API или локальный движок браузера — определяется на старте, переключается в профиле без пересборки (подробнее ниже).
 - **Состояния**: скелетоны загрузки, пустые состояния (`NO TRACKS YET · Be the first one to drop.` / `Your sound starts here.`), ошибки сети с кнопкой «Повторить» (кэшированный профиль открывает приложение и офлайн), `TRACK REMOVED` для удалённого трека.
 - **Адаптив**: iPhone SE → iPhone 16 Pro Max, Android, планшет, десктоп (центрированная колонка). Ничего не наезжает; учтены `safe-area-inset-*`.
 
