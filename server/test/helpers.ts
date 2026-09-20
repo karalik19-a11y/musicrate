@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { Express } from 'express';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { loadConfig } from '../src/config.js';
+import { loadConfig, type Config } from '../src/config.js';
 import { createContext, type AppContext } from '../src/context.js';
 
 export interface TestEnv {
@@ -14,7 +14,7 @@ export interface TestEnv {
   cleanup: () => void;
 }
 
-export async function createTestEnv(): Promise<TestEnv> {
+export async function createTestEnv(overrides: Partial<Config> = {}): Promise<TestEnv> {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'musicrate-test-'));
   const config = loadConfig({
     env: 'test',
@@ -22,6 +22,7 @@ export async function createTestEnv(): Promise<TestEnv> {
     databaseUrl: `file:${path.join(dataDir, 'test.db')}`,
     artistPassword: '00112233',
     clientDist: path.join(dataDir, 'no-client'),
+    ...overrides,
   });
   const ctx = await createContext(config);
   const app = createApp(ctx);
