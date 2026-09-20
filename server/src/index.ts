@@ -11,14 +11,26 @@ async function main() {
     console.log(`[musicrate] ${config.env} server listening on http://${config.host}:${config.port}`);
     console.log(`[musicrate] data dir: ${config.dataDir}`);
     console.log(`[musicrate] database: ${config.databaseUrl.replace(/\?.*$/, '')}`);
+    if (ctx.bot) {
+      // Long-polls Telegram in the background. Never fatal: a bad token or an
+      // unreachable api.telegram.org only disables the bot, not the API.
+      void ctx.bot.start().catch((err) => console.error('[telegram] failed to start:', err));
+    }
   });
 
   const shutdown = (signal: string) => {
     console.log(`[musicrate] ${signal} received, shutting down`);
-    server.close(() => {
-      ctx.db.close();
-      process.exit(0);
-    });
+    void (async () => {
+      try {
+        await ctx.bot?.stop();
+      } catch {
+        /* best effort */
+      }
+      server.close(() => {
+        ctx.db.close();
+        process.exit(0);
+      });
+    })();
     setTimeout(() => process.exit(1), 5000).unref();
   };
   process.on('SIGINT', () => shutdown('SIGINT'));

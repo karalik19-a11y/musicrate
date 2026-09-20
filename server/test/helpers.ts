@@ -5,7 +5,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { loadConfig, type Config } from '../src/config.js';
-import { createContext, type AppContext } from '../src/context.js';
+import { createContext, type AppContext, type ContextDeps } from '../src/context.js';
 
 export interface TestEnv {
   app: Express;
@@ -14,7 +14,7 @@ export interface TestEnv {
   cleanup: () => void;
 }
 
-export async function createTestEnv(overrides: Partial<Config> = {}): Promise<TestEnv> {
+export async function createTestEnv(overrides: Partial<Config> = {}, deps: ContextDeps = {}): Promise<TestEnv> {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'musicrate-test-'));
   const config = loadConfig({
     env: 'test',
@@ -24,7 +24,7 @@ export async function createTestEnv(overrides: Partial<Config> = {}): Promise<Te
     clientDist: path.join(dataDir, 'no-client'),
     ...overrides,
   });
-  const ctx = await createContext(config);
+  const ctx = await createContext(config, deps);
   const app = createApp(ctx);
   return {
     app,

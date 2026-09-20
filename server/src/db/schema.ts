@@ -59,4 +59,11 @@ CREATE TABLE IF NOT EXISTS plays (
 );
 CREATE INDEX IF NOT EXISTS idx_plays_track ON plays(track_id);
 CREATE INDEX IF NOT EXISTS idx_plays_user_track ON plays(user_id, track_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS telegram_subscribers (
+  chat_id    INTEGER PRIMARY KEY,
+  first_name TEXT,
+  username   TEXT,
+  created_at INTEGER NOT NULL
+);
 `;
