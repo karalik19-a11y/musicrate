@@ -21,9 +21,20 @@ export function appButtonUrl(webappUrl: string): string {
   return webappUrl;
 }
 
-/** Deep link straight into the newly published track inside the mini app. */
+/** Deep link straight into the newly published track inside the mini app.
+ *
+ * Telegram injects its launch data into location.hash (#tgWebAppData=...),
+ * which would overwrite a plain "#/track/..." hash and show NotFound
+ * ("LOST IN THE MIX"). To survive that, we encode the deep link in TWO
+ * places:
+ * - ?tgWebAppStartParam=track_<id> in the query — survives Telegram's hash
+ *   injection and is read by the client on boot.
+ * - #/track/<id> in the hash — works outside Telegram and as a fallback.
+ */
 export function trackButtonUrl(webappUrl: string, trackId: string): string {
-  return `${webappUrl.replace(/\/+$/, '')}/#/track/${trackId}`;
+  const base = webappUrl.replace(/\/+$/, '');
+  const safeId = encodeURIComponent(trackId);
+  return `${base}/?tgWebAppStartParam=track_${safeId}#/track/${safeId}`;
 }
 
 export function welcomeMessage(firstName?: string): string {
