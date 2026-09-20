@@ -1,0 +1,51 @@
+name: Pages
+
+# GitHub Pages is publishing the `main` branch from the repository root, so the
+# static bundle lives in the repo (`docs/`) and a launcher at `index.html`.
+# This workflow rebuilds it and commits it back, which keeps
+# https://<owner>.github.io/musicrate/ pointing at the current client without
+# anyone having to touch the Pages settings.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - 'shared/**'
+      - 'scripts/pages-build.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the static bundle
+        run: npm run pages:build
+      - name: Commit the bundle (no-op when already current)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain -- docs index.html 404.html .nojekyll)" ]; then
+            git add --all docs index.html 404.html .nojekyll
+            git commit -m "build(pages): refresh static bundle [skip ci]"
+            git push
+          else
+            echo "docs/ is already up to date"
+          fi
+

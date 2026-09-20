@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router';
 import { Aurora } from '@/components/Aurora';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/Button';
+import { useBackend } from '@/lib/backend/useBackend';
 import { tap } from '@/lib/haptics';
 import { homeFor, useAuth } from '@/stores/auth';
 
@@ -15,6 +16,7 @@ const BARS = Array.from({ length: 34 }, (_, i) => ({
 
 export function Welcome() {
   const user = useAuth((s) => s.user);
+  const info = useBackend();
   const navigate = useNavigate();
 
   // Returning users never see this screen: straight into the app.
@@ -56,6 +58,21 @@ export function Welcome() {
           className="font-display text-[10px] font-semibold uppercase tracking-[0.34em] text-fog"
         >
           Closed platform · est. 2026
+        </motion.p>
+
+        {/* Where the music actually lives — honest label for a static link. */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25, duration: 0.5 }}
+          className="mt-3 inline-flex w-fit items-center gap-2 rounded-full glass px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-fog"
+        >
+          <span
+            className={`size-1.5 rounded-full ${
+              info.kind === 'http' && !info.unreachable ? 'bg-acid shadow-glow-acid' : info.unreachable ? 'bg-danger' : 'bg-silver'
+            }`}
+          />
+          {info.kind === 'http' ? (info.unreachable ? 'Сервер офлайн' : 'Общий каталог') : 'Каталог на этом устройстве'}
         </motion.p>
 
         <div className="flex flex-1 flex-col items-center justify-center text-center">

@@ -1,11 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import type { AuthResponse } from '@shared/types';
 import { MAX_NAME_LENGTH } from '@shared/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { api, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { tap } from '@/lib/haptics';
 import { homeFor, useAuth } from '@/stores/auth';
 import { EntryLayout } from './EntryLayout';
@@ -27,7 +27,7 @@ export function GuestNew() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<AuthResponse>('/auth/guest', { method: 'POST', body: { name: clean } });
+      const res = await getBackend().createGuest(clean);
       tap([10, 30, 10]);
       setSession(res);
       navigate('/home', { replace: true, state: { welcome: true } });

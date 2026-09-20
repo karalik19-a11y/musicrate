@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router';
 import type { User } from '@shared/types';
 import { MAX_NAME_LENGTH } from '@shared/types';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { DataSourcePanel } from '@/components/DataSourcePanel';
+import { useBackend } from '@/lib/backend/useBackend';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen, ScreenHeader } from '@/components/ui/Screen';
 import { useFeed } from '@/hooks/useTracks';
-import { api } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { nameGradient } from '@/lib/cover';
 import { formatDate, plural } from '@/lib/format';
 import { useAuth } from '@/stores/auth';
@@ -17,6 +19,7 @@ import { toast } from '@/stores/toast';
 
 export function GuestProfile() {
   const user = useAuth((s) => s.user)!;
+  const info = useBackend();
   const setUser = useAuth((s) => s.setUser);
   const signOut = useAuth((s) => s.signOut);
   const navigate = useNavigate();
@@ -37,7 +40,7 @@ export function GuestProfile() {
     }
     setSaving(true);
     try {
-      const res = await api<{ user: User }>('/me', { method: 'PATCH', body: { name: clean } });
+      const res = await getBackend().rename(clean);
       setUser(res.user);
       setEditing(false);
       toast.success('Имя обновлено');
@@ -113,9 +116,13 @@ export function GuestProfile() {
           </IconButton>
         </div>
         <p className="mt-3 text-[13px] leading-relaxed text-fog">
-          Введи этот код на другом устройстве → «Я гость» → «Я уже здесь», чтобы вернуть профиль и свои оценки.
+          {info.kind === 'local'
+            ? 'На этом устройстве код возвращает профиль после «Сменить пользователя». Для переноса на другое нужен общий сервер.'
+            : 'Введи этот код на другом устройстве → «Я гость» → «Я уже здесь», чтобы вернуть профиль и свои оценки.'}
         </p>
       </section>
+
+      <DataSourcePanel />
 
       <div className="mt-6">
         <Button variant="outline" size="lg" block icon={<LogOut className="size-4" />} onClick={() => setConfirmSwitch(true)}>

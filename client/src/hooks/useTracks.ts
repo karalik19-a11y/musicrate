@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { ArtistOverview, RatingInput, Track, TrackSort } from '@shared/types';
-import { api, upload } from '@/lib/api';
+import { getBackend } from '@/lib/backend';
 import { usePlayer } from '@/stores/player';
 
 /* ------------------------------ keys ------------------------------ */
@@ -18,12 +18,7 @@ export const artistKeys = { overview: ['artist', 'overview'] as const };
 export function useFeed(sort: TrackSort = 'new', q = '') {
   return useQuery({
     queryKey: trackKeys.feed(sort, q),
-    queryFn: async () => {
-      const params = new URLSearchParams({ sort });
-      if (q) params.set('q', q);
-      const res = await api<{ tracks: Track[] }>(`/tracks?${params}`);
-      return res.tracks;
-    },
+    queryFn: async () => (await getBackend().listTracks({ sort, query: q || undefined })).tracks,
     staleTime: 15_000,
   });
 }
@@ -31,7 +26,7 @@ export function useFeed(sort: TrackSort = 'new', q = '') {
 export function useTrack(id: string | undefined) {
   return useQuery({
     queryKey: trackKeys.detail(id ?? ''),
-    queryFn: async () => (await api<{ track: Track }>(`/tracks/${id}`)).track,
+    queryFn: async () => (await getBackend().getTrack(id!)).track,
     enabled: Boolean(id),
     staleTime: 10_000,
     retry: (count, error) => {
@@ -44,7 +39,7 @@ export function useTrack(id: string | undefined) {
 export function useMyTracks() {
   return useQuery({
     queryKey: trackKeys.mine(),
-    queryFn: async () => (await api<{ tracks: Track[] }>('/artist/tracks')).tracks,
+    queryFn: async () => (await getBackend().myTracks()).tracks,
     staleTime: 10_000,
   });
 }
@@ -52,7 +47,7 @@ export function useMyTracks() {
 export function useArtistOverview() {
   return useQuery({
     queryKey: artistKeys.overview,
-    queryFn: async () => (await api<{ overview: ArtistOverview }>('/artist/overview')).overview,
+    queryFn: async () => (await getBackend().overview()).overview,
     staleTime: 10_000,
   });
 }
@@ -78,11 +73,14 @@ export function removeTrackFromCache(client: QueryClient, id: string): void {
 
 /* --------------------------- mutations ---------------------------- */
 
+/**
+ * The response is the track as the backend recomputed it — averages and total
+ * included. The UI never builds a score out of its own numbers.
+ */
 export function useRateTrack(trackId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (rating: RatingInput) =>
-      (await api<{ track: Track }>(`/tracks/${trackId}/rating`, { method: 'PUT', body: rating })).track,
+    mutationFn: async (rating: RatingInput) => (await getBackend().rateTrack(trackId, rating)).track,
     onSuccess: (track) => {
       applyTrackUpdate(client, track);
       void client.invalidateQueries({ queryKey: trackKeys.feed('top', ''), exact: false });
@@ -94,7 +92,7 @@ export function useDeleteTrack() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await api(`/tracks/${id}`, { method: 'DELETE' });
+      await getBackend().deleteTrack(id);
       return id;
     },
     onSuccess: (id) => {
@@ -109,6 +107,7 @@ export interface PublishInput {
   artistName: string;
   file: File;
   waveform: number[] | null;
+  duration: number | null;
   onProgress: (ratio: number) => void;
 }
 
@@ -116,12 +115,8 @@ export function usePublishTrack() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (input: PublishInput) => {
-      const form = new FormData();
-      form.set('title', input.title);
-      form.set('artistName', input.artistName);
-      if (input.waveform) form.set('waveform', JSON.stringify(input.waveform));
-      form.set('audio', input.file, input.file.name);
-      return (await upload<{ track: Track }>('/tracks', form, { onProgress: input.onProgress })).track;
+      const { onProgress, ...rest } = input;
+      return (await getBackend().publish({ ...rest, onProgress })).track;
     },
     onSuccess: (track) => {
       client.setQueryData<Track[]>(trackKeys.mine(), (old) => (old ? [track, ...old] : [track]));
@@ -129,5 +124,25 @@ export function usePublishTrack() {
       void client.invalidateQueries({ queryKey: trackKeys.all });
       void client.invalidateQueries({ queryKey: artistKeys.overview });
     },
+  });
+}
+
+/** One play per user per 30s, deduped by whoever stores the data. */
+export function useRecordPlay() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => (await getBackend().recordPlay(id)).plays,
+    onSuccess: (plays, id) => {
+      client.setQueryData<Track>(trackKeys.detail(id), (old) => (old ? { ...old, plays } : old));
+      client.setQueriesData<Track[]>({ queryKey: trackKeys.all, exact: false }, (old) =>
+        Array.isArray(old) ? old.map((t) => (t.id === id ? { ...t, plays } : t)) : old,
+      );
+    },
+  });
+}
+
+export function useUpdateProfile() {
+  return useMutation({
+    mutationFn: async (name: string) => (await getBackend().rename(name)).user,
   });
 }

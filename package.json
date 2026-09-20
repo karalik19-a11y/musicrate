@@ -2,7 +2,7 @@
   "name": "musicrate",
   "private": true,
   "version": "1.0.0",
-  "description": "MUSICRATE — a closed music platform for artists and listeners. Premium mobile-first UX, real audio uploads, public 0–90 ratings.",
+  "description": "MUSICRATE \u2014 a closed music platform for artists and listeners. Premium mobile-first UX, real audio uploads, public 0\u201390 ratings.",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -16,7 +16,10 @@
     "build": "npm run build -w client && npm run build -w server",
     "start": "npm run start -w server",
     "typecheck": "npm run typecheck -w client && npm run typecheck -w server",
-    "test": "npm run test -w server"
+    "test": "npm run test -w server && npm run test -w client",
+    "preview": "npm run preview -w client",
+    "pages:build": "node scripts/pages-build.mjs",
+    "pages:check": "npm run pages:build && git diff --exit-code -- docs index.html 404.html .nojekyll"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

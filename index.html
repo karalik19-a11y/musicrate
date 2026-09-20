@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MUSICRATE</title>
+    <meta name="theme-color" content="#060607" />
+    <meta name="robots" content="noindex" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #060607;
+      }
+    </style>
+    <meta http-equiv="refresh" content="0; url=./docs/index.html" />
+    <link rel="canonical" href="./docs/index.html" />
+  </head>
+  <body>
+    <script>
+      // forward ?api=… (data source override) and the current route to the app
+      var target = './docs/index.html' + location.search + location.hash;
+      if (location.pathname.replace(/\/+$/, '').endsWith('/404')) target = './docs/index.html';
+      location.replace(target);
+    </script>
+    <p style="font:14px/1.6 ui-sans-serif,system-ui,sans-serif;color:#8a8a95;padding:24px">
+      <a style="color:#d7ff3f" href="./docs/index.html">Открыть MUSICRATE</a>
+    </p>
+  </body>
+</html>
